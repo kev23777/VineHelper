@@ -40,7 +40,7 @@ var DialogMgr = new ModalMgr();
 
 import { News } from "./News.js";
 
-import { NotificationMonitor } from "./NotificationMonitor.js";
+import { NotificationMonitorV3 } from "./NotificationMonitorV3.js";
 
 import { Pagination } from "./Pagination.js";
 var pagination = new Pagination();
@@ -58,6 +58,8 @@ var tileSizer = new TileSizer();
 import { Toolbar } from "./Toolbar.js";
 
 import { Tooltip } from "./Tooltip.js";
+import { unescapeHTML } from "./StringHelper.js";
+
 var tooltip = new Tooltip();
 
 const ultraviner = env.data.ultraviner; //If Ultravine is detected, Vine Helper will deactivate itself to avoid conflicts.
@@ -164,11 +166,29 @@ async function init() {
 		}
 
 		//Initate the notification monitor
-		notificationMonitor = new NotificationMonitor();
+		notificationMonitor = new NotificationMonitorV3();
 		await notificationMonitor.initialize();
 
 		hookMgr.hookExecute("productsUpdated", null);
 		return; //Do not initialize the page as normal
+	}
+
+	// If a search has been performed, unescape the HTML encoded characters for the line
+	// X item(s) matching "[SEARCH STRING WITH HTML ENCODED CHARACTERS]"
+	for (const node of document.querySelector("#vvp-items-grid-container").childNodes) {
+		if (node.nodeName === "P") {
+			const matchingSearchText = node.innerHTML;
+
+			if (matchingSearchText) {
+				node.innerHTML = unescapeHTML(unescapeHTML(matchingSearchText));
+			}
+		}
+	}
+
+	// If a search has been performed, unescape the HTML encoded characters for the text in the search box
+	const searchTextInput = document.querySelector("#vvp-search-text-input");
+	if (searchTextInput) {
+		searchTextInput.value = unescapeHTML(unescapeHTML(searchTextInput.value));
 	}
 
 	if (Settings.get("general.blindLoading")) {
@@ -756,7 +776,7 @@ async function initTilesAndDrawToolbars() {
 			//Add tool tip to the truncated item title link
 			if (Settings.get("general.displayFullTitleTooltip")) {
 				const titleDOM = arrObj[i].querySelector(".a-link-normal");
-				tooltip.addTooltip(titleDOM, tile.getTitle());
+				tooltip.addTooltip(titleDOM, unescapeHTML(unescapeHTML(tile.getTitle())));
 			}
 
 			//Generate the toolbar
